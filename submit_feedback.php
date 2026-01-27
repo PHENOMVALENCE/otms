@@ -1,36 +1,32 @@
 <?php
-// Database configuration
-$servername = "localhost";
-$username = "root"; // Replace with your database username
-$password = ""; // Replace with your database password
-$dbname = "feedback_db"; // Replace with your database name
+session_start();
+require_once 'includes/config.php';
 
-// Create a connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check the connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: index.php');
+    exit;
 }
 
-// Get feedback data from the POST request
-$type = $_POST['type'];
-$description = $_POST['description'];
-$priority = $_POST['priority'];
-$contact_info = $_POST['contact'];
+$type = trim($_POST['type'] ?? '');
+$description = trim($_POST['description'] ?? '');
+$priority = trim($_POST['priority'] ?? 'Medium');
+$contact = trim($_POST['contact'] ?? '');
 
-// Prepare and bind
-$stmt = $conn->prepare("INSERT INTO feedback (type, description, priority, contact_info) VALUES (?, ?, ?, ?)");
-$stmt->bind_param("ssss", $type, $description, $priority, $contact_info);
+if (empty($type) || empty($description)) {
+    $_SESSION['feedback_error'] = 'Type and description are required.';
+    header('Location: index.php');
+    exit;
+}
 
-// Execute the statement
+$stmt = $connection->prepare("INSERT INTO feedback (type, description, priority, contact_info) VALUES (?, ?, ?, ?)");
+$stmt->bind_param("ssss", $type, $description, $priority, $contact);
+
 if ($stmt->execute()) {
-    echo "Feedback submitted successfully";
+    $_SESSION['feedback_success'] = 'Thank you for your feedback.';
 } else {
-    echo "Error: " . $stmt->error;
+    $_SESSION['feedback_error'] = 'Failed to submit feedback. Please try again.';
 }
-
-// Close the statement and connection
 $stmt->close();
-$conn->close();
-?>
+
+header('Location: index.php');
+exit;

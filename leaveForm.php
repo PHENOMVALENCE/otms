@@ -1,117 +1,27 @@
 <?php
-include('includes/config.php');
 session_start();
+require_once 'includes/config.php';
 
-if (isset($_POST['submit_leave'])) {
-    $subject = mysqli_real_escape_string($connection, $_POST['subject']);
-    $message = mysqli_real_escape_string($connection, $_POST['message']);
-    $user_id = $_SESSION['user_id'];
-    $username = $_SESSION['username'];
-
-    if (!empty($subject) && !empty($message)) {
-        $query = "INSERT INTO leaves (user_id, subject, message, status, applied_at) 
-                  VALUES ('$user_id', '$subject', '$message', 'Pending', NOW())";
-        $run = mysqli_query($connection, $query);
-
-        if ($run) {
-            // Insert a notification for admin
-            $notif = "Leave application submitted by $username.";
-            $notif_query = "INSERT INTO notifications (user_id, user_role, message, status, created_at)
-                            VALUES ('$user_id', 'admin', '$notif', 'unread', NOW())";
-            mysqli_query($connection, $notif_query);
-
-            echo "<script>alert('Leave submitted successfully.');</script>";
-        } else {
-            echo "Error: " . mysqli_error($connection);
-        }
-    } else {
-        echo "All fields are required.";
-    }
+if (!isset($_SESSION['id'])) {
+    echo '<p>Please <a href="user_login.php">log in</a>.</p>';
+    exit;
 }
 ?>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Apply for Leave</h2>
+    <a href="user_dashboard.php" class="otms-btn otms-btn-ghost" style="font-size:0.9rem;">← Dashboard</a>
+</div>
 
-
-<html>
-
-<head>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-
-        h2 {
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 50%;
-            padding: 8px;
-            box-sizing: border-box;
-        }
-
-        .btn-warning {
-            background-color: yellow;
-            border: none;
-            color: black;
-            padding: 5px 10px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 12px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-            width: 10%;
-
-        }
-
-        .btn-warning:hover {
-            background-color: gold;
-        }
-
-        h3 {
-            color: white;
-        }
-
-        .form-group label {
-            color: lightskyblue;
-        }
-    </style>
-</head>
-
-<body>
-    <b>
-        <h3>APPLY LEAVE</h3><br>
-    </b>
-    <div class="row">
-        <div class="col-md-6">
-            <form action="" method="post">
-                <div class="form-group">
-                    <label for="subject">Subject</label>
-                    <input type="text" class="form-group" name="subject" placeholder="leave Subject goes here.....">
-                </div>
-                <div class="form-group">
-                    <label for="message">Message</label>
-                    <textarea id="message" row="3" cols="40" name="message" placeholder="Type Message...">
-                    </textarea>
-                </div>
-                <input type="submit" class="btn btn-warning" name="submit_leave" value="submit">
-
-            </form>
+<div class="otms-card">
+    <form method="post" action="user_dashboard.php">
+        <div class="otms-field">
+            <label for="subject">Subject *</label>
+            <input type="text" name="subject" id="subject" required placeholder="e.g. Sick leave">
         </div>
-    </div>
-</body>
-
-</html>
+        <div class="otms-field">
+            <label for="message">Message *</label>
+            <textarea name="message" id="message" required placeholder="Describe your leave request..."></textarea>
+        </div>
+        <button type="submit" name="submit_leave" class="otms-btn otms-btn-primary">Submit</button>
+    </form>
+</div>

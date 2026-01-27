@@ -1,177 +1,149 @@
 <?php
-include('../includes/config.php');
+session_start();
+require_once __DIR__ . '/../includes/config.php';
 
-if (isset($_POST['edit_task'])) {
-    $id = mysqli_real_escape_string($connection, $_POST['id']);
-    $description = mysqli_real_escape_string($connection, $_POST['description']);
-    $start_date = mysqli_real_escape_string($connection, $_POST['start_date']);
-    $end_date = mysqli_real_escape_string($connection, $_POST['end_date']);
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: admin_login.php');
+    exit;
+}
 
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+if ($id <= 0) {
+    header('Location: admin_dashboard.php');
+    exit;
+}
 
-    $query = "UPDATE tasks SET description = '$description', start_date = '$start_date', end_date = '$end_date' WHERE id = '$id'";
-    $query_run = mysqli_query($connection, $query);
+$stmt = $connection->prepare("SELECT id, title, description, start_date, end_date, status, priority FROM tasks WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$task = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
-    if ($query_run) {
-        echo "<script type='text/javascript'>
-                alert('Task updated successfully...');
-                window.location.href = 'admin_dashboard.php';
-              </script>";
+if (!$task) {
+    header('Location: admin_dashboard.php');
+    exit;
+}
+
+$assigned_ids = [];
+$ar = $connection->prepare("SELECT user_id FROM task_assignments WHERE task_id = ?");
+$ar->bind_param("i", $id);
+$ar->execute();
+$res = $ar->get_result();
+while ($row = $res->fetch_assoc()) $assigned_ids[] = (int) $row['user_id'];
+$ar->close();
+
+$error = '';
+$updated = false;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_task'])) {
+    $user_ids = isset($_POST['user_ids']) && is_array($_POST['user_ids']) ? $_POST['user_ids'] : [];
+    $user_ids = array_unique(array_filter(array_map('intval', $user_ids)));
+    $title = trim($_POST['title'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $start_date = trim($_POST['start_date'] ?? '');
+    $end_date = trim($_POST['end_date'] ?? '');
+    $priority = trim($_POST['priority'] ?? 'Medium');
+
+    if (count($user_ids) === 0 || $description === '') {
+        $error = 'Select at least one user and enter a description.';
     } else {
-        echo "<script type='text/javascript'>
-                alert('Error...please try again!!!');
-                window.location.href = 'admin_dashboard.php';
-              </script>";
+        $up = $connection->prepare("UPDATE tasks SET title = ?, description = ?, start_date = NULLIF(?, ''), end_date = NULLIF(?, ''), priority = ? WHERE id = ?");
+        $up->bind_param("sssssi", $title, $description, $start_date, $end_date, $priority, $id);
+        if ($up->execute()) {
+            $up->close();
+            $del = $connection->prepare("DELETE FROM task_assignments WHERE task_id = ?");
+            $del->bind_param("i", $id);
+            $del->execute();
+            $del->close();
+            $ins = $connection->prepare("INSERT INTO task_assignments (task_id, user_id) VALUES (?, ?)");
+            foreach ($user_ids as $uid) {
+                if ($uid > 0) {
+                    $ins->bind_param("ii", $id, $uid);
+                    $ins->execute();
+                }
+            }
+            $ins->close();
+            $updated = true;
+        } else {
+            $error = 'Update failed. Please try again.';
+            $up->close();
+        }
     }
 }
+
+if ($updated) {
+    echo "<script>alert('Task updated successfully.'); window.location.href='admin_dashboard.php';</script>";
+    exit;
+}
+
+$users = [];
+$r = $connection->query("SELECT id, username FROM users ORDER BY username");
+if ($r) while ($row = $r->fetch_assoc()) $users[] = $row;
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ETMS</title>
-    <script src="../includes/jquery_latest.js"></script>
-    <!-- Bootstrap files -->
-    <link rel="stylesheet" type="text/css" href="../bootstrap/css/bootstrap.min.css">
-    <script src="../bootstrap/js/bootstrap.min.js"></script>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: url('/OTMS PROJECT/background/sad.gif') no-repeat center center fixed;
-            background-size: cover;
-            background-color: #355764;
-        }
-
-        #header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            background-color: darksalmon;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 110%;
-            padding: 8px;
-            box-sizing: border-box;
-        }
-
-        .btn-warning {
-            background-color: yellow;
-            border: none;
-            color: black;
-            padding: 5px 10px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 12px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-            width: 30%;
-
-        }
-
-        .btn-warning:hover {
-            background-color: gold;
-        }
-
-        .center-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-
-        h3 {
-            color: salmon;
-        }
-
-        .form-group label {
-            color: salmon;
-        }
-    </style>
+    <title>Edit Task – OTMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
 </head>
-
 <body>
-    <!-- Header code starts here -->
-    <div class="row" id="header">
-        <div class="col-md-12">
-            <h2><i class="fa fa-solid fa-list" style="padding-right: 15px;"></i>Online Task Management System</h2>
+    <div class="otms-center">
+        <div class="otms-card" style="max-width:520px;">
+            <h1>Edit task</h1>
+            <?php if ($error): ?>
+                <div class="otms-alert otms-alert-danger"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+            <form method="post" action="">
+                <input type="hidden" name="id" value="<?= (int)$task['id'] ?>">
+                <div class="otms-field">
+                    <label for="user_ids">Assign to user(s) *</label>
+                    <select name="user_ids[]" id="user_ids" class="form-select" multiple size="6">
+                        <?php foreach ($users as $u): ?>
+                            <option value="<?= (int)$u['id'] ?>" <?= in_array((int)$u['id'], $assigned_ids, true) ? 'selected' : '' ?>><?= htmlspecialchars($u['username']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple users.</small>
+                </div>
+                <div class="otms-field">
+                    <label for="title">Title (optional)</label>
+                    <input type="text" name="title" id="title" placeholder="Title" value="<?= htmlspecialchars($task['title'] ?? '') ?>">
+                </div>
+                <div class="otms-field">
+                    <label for="description">Description *</label>
+                    <textarea name="description" id="description" required><?= htmlspecialchars($task['description'] ?? '') ?></textarea>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <div class="otms-field">
+                            <label for="start_date">Start date</label>
+                            <input type="date" name="start_date" id="start_date" value="<?= htmlspecialchars($task['start_date'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="otms-field">
+                            <label for="end_date">End date</label>
+                            <input type="date" name="end_date" id="end_date" value="<?= htmlspecialchars($task['end_date'] ?? '') ?>">
+                        </div>
+                    </div>
+                </div>
+                <div class="otms-field">
+                    <label for="priority">Priority</label>
+                    <select name="priority" id="priority" class="form-select">
+                        <option value="Low" <?= ($task['priority'] ?? '') === 'Low' ? 'selected' : '' ?>>Low</option>
+                        <option value="Medium" <?= ($task['priority'] ?? 'Medium') === 'Medium' ? 'selected' : '' ?>>Medium</option>
+                        <option value="High" <?= ($task['priority'] ?? '') === 'High' ? 'selected' : '' ?>>High</option>
+                    </select>
+                </div>
+                <button type="submit" name="edit_task" class="otms-btn otms-btn-primary">Update</button>
+                <a href="admin_dashboard.php" class="otms-btn otms-btn-ghost ms-2">Cancel</a>
+            </form>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-4 m-auto" style="color:white;"><br>
-            <center>
-                <h3>Edit the task</h3><br>
-            </center>
-            <div class="center-content">
-                <?php
-                $query = "select * from tasks where id = $_GET[id]";
-                $query_run = mysqli_query($connection, $query);
-                while ($row = mysqli_fetch_assoc($query_run)) {
-                ?>
-                    <form action="" method="post">
-                        <div class="form-group">
-                            <input type="hidden" name="id" class="form-control" value="<?php echo $row['id']; ?>" required>
-                        </div>
-                        <div class="form-group" center-content>
-                            <label>Select user:</label>
-                            <select class="form-control" name="user_id" required>
-                                <option>-select-</option>
-                                <?php
-
-                                $query1 = "SELECT id, username FROM users";
-                                $query_run1 = mysqli_query($connection, $query1);
-                                if (mysqli_num_rows($query_run1)) {
-                                    while ($row1 = mysqli_fetch_assoc($query_run1)) {
-                                ?>
-                                        <option value="<?php echo $row1['id']; ?>"><?php echo $row1['username']; ?></option>
-                                <?php
-                                    }
-                                }
-                                ?>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="description">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="3" cols="40" required><?php echo $row['description']; ?></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="start_date">Start Date</label>
-                            <input type="date" class="form-control" id="start_date" name="start_date" value="<?php echo $row['start_date']; ?>" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="end-date">End Date</label>
-                            <input type="date" class="form-control" id="end_date" name="end_date" value="<?php echo $row['end_date']; ?>" required>
-                        </div>
-                        <input type="submit" class="btn btn-warning" name="edit_task" value="Update">
-                    </form>
-                <?php
-                }
-                ?>
-
-            </div>
-        </div>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

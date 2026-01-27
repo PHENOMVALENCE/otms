@@ -35,6 +35,9 @@ CREATE TABLE `admins` (
   `phone` varchar(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+INSERT INTO `admins` (`id`, `username`, `email`, `password`, `phone`) VALUES
+(1, 'admin', 'admin@otms.local', 'admin123', '0000000000');
+
 -- --------------------------------------------------------
 
 --
@@ -46,7 +49,8 @@ CREATE TABLE `leaves` (
   `user_id` int(11) DEFAULT NULL,
   `subject` varchar(255) DEFAULT NULL,
   `message` text DEFAULT NULL,
-  `status` varchar(50) DEFAULT 'Not Action'
+  `status` varchar(50) DEFAULT 'Pending',
+  `applied_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -102,10 +106,12 @@ INSERT INTO `notifications` (`id`, `user_id`, `user_role`, `message`, `link`, `i
 CREATE TABLE `tasks` (
   `id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `start_date` date DEFAULT NULL,
   `end_date` date DEFAULT NULL,
-  `status` varchar(50) DEFAULT 'Not Started'
+  `status` varchar(50) DEFAULT 'Not Started',
+  `priority` varchar(20) DEFAULT 'Medium'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -189,7 +195,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `leaves`
@@ -216,6 +222,43 @@ ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- Table structure for table `feedback`
+--
+CREATE TABLE `feedback` (
+  `id` int(11) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `description` text NOT NULL,
+  `priority` varchar(20) DEFAULT 'Medium',
+  `contact_info` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- AUTO_INCREMENT for table `feedback`
+--
+ALTER TABLE `feedback`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Table structure for table `task_assignments`
+--
+CREATE TABLE `task_assignments` (
+  `task_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  PRIMARY KEY (`task_id`, `user_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `task_assignments_task` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `task_assignments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `task_assignments`
+--
+INSERT INTO `task_assignments` (`task_id`, `user_id`) VALUES
+(1, 1), (2, 1), (7, 4);
+
+--
 -- Constraints for dumped tables
 --
 
@@ -224,12 +267,6 @@ ALTER TABLE `users`
 --
 ALTER TABLE `leaves`
   ADD CONSTRAINT `leaves_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `tasks`
---
-ALTER TABLE `tasks`
-  ADD CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

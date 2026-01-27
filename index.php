@@ -1,226 +1,148 @@
+<?php
+session_start();
+require_once 'includes/config.php';
+$is_user = isset($_SESSION['id']) && isset($_SESSION['email']);
+$is_admin = isset($_SESSION['admin_id']) && isset($_SESSION['admin_username']);
+?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTMS</title>
-    <!-- jQuery file -->
-    <script src="includes/jquery_latest.js"></script>
-    <!-- Bootstrap files -->
-    <link rel="stylesheet" type="text/css" href="booystrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.18.0/font/bootstrap-icons.css">
-    <script src="bootstrap/js/bootstrap.min.js"></script>
-
-    <link rel="stylesheet" type="text/css" href="css/style.css">
-    <style>
-        .logo-image {
-            width: 100px;
-
-            height: auto;
-
-            margin-right: 10px;
-
-            vertical-align: middle;
-
-        }
-
-        .contact-info {
-            display: none;
-            margin-top: 20px;
-            padding: 10px;
-            background-color: rgba(255, 255, 255, 0.25);
-
-        }
-
-        .contact-link,
-        .feedback-link {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            background-color: rgba(0, 0, 255, 0.5);
-            color: #fff;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-
-        .feedback-link {
-            margin-bottom: 60px;
-        }
-
-        .contact-link:hover,
-        .feedback-link:hover {
-            background-color: #0056b3;
-        }
-
-        .img {
-            vertical-align: middle;
-            margin-right: 7px;
-        }
-
-        .contact-info img {
-            vertical-align: middle;
-            margin-right: 7px;
-        }
-
-        .feedback-form {
-            display: none;
-            position: fixed;
-            bottom: 100px;
-            right: 20px;
-            z-index: 1000;
-            background-color: rgba(255, 255, 255, 0.5);
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            width: 300px;
-        }
-
-        .modal-body {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-        }
-    </style>
-    <script>
-        function toggleContact() {
-            var contactInfo = document.getElementById('contact-info');
-            if (contactInfo.style.display === 'none') {
-                contactInfo.style.display = 'block';
-            } else {
-                contactInfo.style.display = 'none';
-            }
-        }
-
-        function toggleFeedback() {
-            var feedbackForm = document.getElementById('feedback-form');
-            if (feedbackForm.style.display === 'none') {
-                feedbackForm.style.display = 'block';
-            } else {
-                feedbackForm.style.display = 'none';
-            }
-        }
-
-        function submitFeedback(event) {
-            event.preventDefault();
-            var feedbackData = {
-                type: document.getElementById('feedbackType').value,
-                description: document.getElementById('feedbackDescription').value,
-                priority: document.getElementById('feedbackPriority').value,
-                contact: document.getElementById('feedbackContact').value,
-            };
-
-            // Example: Sending feedback data to the server using jQuery AJAX
-            $.ajax({
-                url: 'submit_feedback.php', // Your server-side script to handle feedback
-                method: 'POST',
-                data: feedbackData,
-                success: function(response) {
-                    alert('Thank you for your feedback!');
-                    var feedbackModal = bootstrap.Modal.getInstance(document.getElementById('feedbackModal'));
-                    feedbackModal.hide();
-                },
-                error: function(error) {
-                    alert('Error submitting feedback. Please try again later.');
-                }
-            });
-        }
-    </script>
-
+    <title>OTMS – Online Task Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
-    <h1>
-        <img src="/OTMS PROJECT/OTMS PROJECT/logo/logo33.png" alt="Logo" class="logo-image">
-        ONLINE TASK MANAGEMENT SYSTEM
-    </h1>
-    <div class="container center-align">
-        <div class="row">
-            <div class="col-md-12 text-center">
-                <h3>CHOOSE LOGIN ROLE!</h3><br>
+    <div class="otms-center">
+        <div class="otms-container text-center">
+            <img src="logo/logo33.png" alt="OTMS" class="mb-3" style="width:88px;height:auto;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+            <div class="otms-hero">
+                <h1 class="mb-2">Welcome to OTMS</h1>
+                <p class="lead">
+                    Whether you’re a <strong>team member</strong> managing tasks and leave, or an <strong>admin</strong> with full system control — you’re in the right place.
+                </p>
+            </div>
+
+            <?php if (!empty($_SESSION['feedback_success'])): ?>
+                <div class="otms-alert otms-alert-success mb-3"><?= htmlspecialchars($_SESSION['feedback_success']) ?></div>
+                <?php unset($_SESSION['feedback_success']); ?>
+            <?php endif; ?>
+            <?php if (!empty($_SESSION['feedback_error'])): ?>
+                <div class="otms-alert otms-alert-danger mb-3"><?= htmlspecialchars($_SESSION['feedback_error']) ?></div>
+                <?php unset($_SESSION['feedback_error']); ?>
+            <?php endif; ?>
+
+            <div class="otms-role-grid">
+                <a href="<?= $is_user ? 'user_dashboard.php' : 'user_login.php' ?>" class="otms-role-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <?= $is_user ? 'Go to Dashboard' : 'User Login' ?>
+                    <span class="sub">Team members: tasks & leave</span>
+                </a>
+                <?php if (!$is_user): ?>
+                <a href="register.php" class="otms-role-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    Register
+                    <span class="sub">Create your account</span>
+                </a>
+                <?php endif; ?>
+                <a href="<?= $is_admin ? 'admin/admin_dashboard.php' : 'admin/admin_login.php' ?>" class="otms-role-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <?= $is_admin ? 'Admin Dashboard' : 'Admin Login' ?>
+                    <span class="sub">Full system control & privileges</span>
+                </a>
+            </div>
+
+            <div class="otms-features">
+                <div class="otms-feature">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                    <span>Tasks & progress</span>
+                </div>
+                <div class="otms-feature">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <span>Leave management</span>
+                </div>
+                <div class="otms-feature">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                    <span>Notifications</span>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex flex-wrap justify-content-center gap-2">
+                <button type="button" class="otms-btn otms-btn-ghost" data-bs-toggle="modal" data-bs-target="#contactModal">Contact</button>
+                <button type="button" class="otms-btn otms-btn-ghost" data-bs-toggle="modal" data-bs-target="#feedbackModal">Feedback</button>
             </div>
         </div>
-        <form action="config.php" method="post">
-            <div class="row login-options-row">
-                <div class="col-md-4 text-center">
-                    <a href="user_login.php" class="btn login-button login-button-success">User Login</a><br><br><br>
-                </div>
-                <div class="col-md-4 text-center">
-                    <a href="register.php" class="btn login-button login-button-warning">User Registration</a><br><br><br>
-                </div>
-                <div class="col-md-4 text-center">
-                    <a href="admin/admin_login.php" class="btn login-button login-button-info">Admin Login</a><br>
-                </div>
-            </div>
-
-        </form>
     </div>
 
-    <a href="#" onclick="toggleContact();" class="contact-link">CONTACT FOR QUESTIONS</a>
-    <a href="#" onclick="toggleFeedback();" class="feedback-link">FEEDBACK</a>
-
-    <div id="contact-info" class="container center-align contact-info">
-        <b>
-            <h2>CONTACT INFORMATION</h2>
-        </b>
-        <p><img src="envelope.svg" alt="Envelope Icon" height="32" width="32" class="img"> Email: Jessemallya@gmail.com</p>
-        <p><img src="telephone.svg" alt="Telephone Icon" height="32" width="32" class="img"> Phone: +255653294241</p>
-        <p><img src="instagram.svg" alt="Instagram Icon" height="32" width="32" class="img"> Instagram: _.firminjr03</p>
-    </div>
-
-    <div id="feedback-form" class="feedback-form">
-        <div class="modal-dialog">
+    <div class="modal fade" id="contactModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="feedbackModalLabel">Submit Feedback</h5>
+                    <h5 class="modal-title">Contact</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="feedbackForm" onsubmit="submitFeedback(event);">
-                        <div class="form-group">
-                            <label for="feedbackType">Type of Feedback</label>
-                            <select class="form-select" id="feedbackType" required>
+                    <p class="mb-2"><strong>Email:</strong> Jessemallya@gmail.com</p>
+                    <p class="mb-2"><strong>Phone:</strong> +255653294241</p>
+                    <p class="mb-0"><strong>Instagram:</strong> _.firminjr03</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="feedbackModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Submit Feedback</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="feedbackForm" action="submit_feedback.php" method="post">
+                    <div class="modal-body">
+                        <div class="otms-field">
+                            <label for="fbType">Type</label>
+                            <select class="form-select" name="type" id="fbType" required>
                                 <option value="Bug Report">Bug Report</option>
                                 <option value="Feature Request">Feature Request</option>
                                 <option value="General Feedback">General Feedback</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="feedbackDescription">Description</label>
-                            <textarea class="form-control" id="feedbackDescription" rows="3" required></textarea>
+                        <div class="otms-field">
+                            <label for="fbDesc">Description</label>
+                            <textarea name="description" id="fbDesc" rows="3" required placeholder="Your feedback..."></textarea>
                         </div>
-                        <div class="form-group">
-                            <label for="feedbackPriority">Priority</label>
-                            <select class="form-select" id="feedbackPriority" required>
+                        <div class="otms-field">
+                            <label for="fbPriority">Priority</label>
+                            <select class="form-select" name="priority" id="fbPriority">
                                 <option value="Low">Low</option>
                                 <option value="Medium">Medium</option>
                                 <option value="High">High</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="feedbackContact">Contact Information (optional)</label>
-                            <input type="text" class="form-control" id="feedbackContact" placeholder="Email or Phone">
+                        <div class="otms-field">
+                            <label for="fbContact">Contact (optional)</label>
+                            <input type="text" name="contact" id="fbContact" placeholder="Email or phone">
                         </div>
-                        <button type="submit" class="btn btn-primary">Submit Feedback</button>
-                    </form>
-                </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="otms-btn otms-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="otms-btn otms-btn-primary">Submit</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

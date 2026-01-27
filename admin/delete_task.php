@@ -1,17 +1,22 @@
 <?php
-include('../includes/config.php');
-$query = "delete from tasks where id = $_GET[id]";
-$query_run = mysqli_query($connection,$query);
-if($query_run){
-    echo "<script type='text/javascript'>
-                alert('Task Deleted Successfully...');
-                window.location.href = 'admin_dashboard.php';
-              </script>";
+session_start();
+require_once __DIR__ . '/../includes/config.php';
+
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: admin_login.php');
+    exit;
 }
-else{
-    echo "<script type='text/javascript'>
-                alert('Error please try again...');
-                window.location.href = 'admin_dashboard.php';
-              </script>";
+
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+if ($id <= 0) {
+    header('Location: admin_dashboard.php');
+    exit;
 }
-?>
+
+$stmt = $connection->prepare("DELETE FROM tasks WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$stmt->close();
+
+echo "<script>alert('Task deleted successfully.'); window.location.href='admin_dashboard.php';</script>";
+exit;

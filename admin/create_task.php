@@ -1,111 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
+<?php
+session_start();
+require_once __DIR__ . '/../includes/config.php';
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>create Task</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
+if (!isset($_SESSION['admin_id'])) {
+    echo '<p>Please <a href="admin_login.php">log in</a>.</p>';
+    exit;
+}
 
-        h2 {
-            margin-bottom: 20px;
-        }
+$users = [];
+$r = $connection->query("SELECT id, username FROM users ORDER BY username");
+if ($r) while ($row = $r->fetch_assoc()) $users[] = $row;
+?>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Create Task</h2>
+    <a href="admin_dashboard.php" class="otms-btn otms-btn-ghost" style="font-size:0.9rem;">← Dashboard</a>
+</div>
 
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 50%;
-            padding: 8px;
-            box-sizing: border-box;
-        }
-
-        .btn-warning {
-            background-color: yellow;
-            border: none;
-            color: black;
-            padding: 5px 10px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 12px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-            width: 10%;
-
-        }
-
-        .btn-warning:hover {
-            background-color: gold;
-        }
-
-        h3 {
-            color: white;
-        }
-
-        .form-group label {
-            color: lightskyblue;
-        }
-    </style>
-</head>
-
-<body>
-    <b>
-        <h3>CREATE A NEW TASK HERE.</h3>
-    </b>
-    <div class="row">
-        <div class="col-md-6">
-            <form action="admin_dashboard.php" method="post">
-                <div class="form-group">
-                    <label>Select user:</label>
-                    <select class="form-control" name="user_id">
-                        <option value="-1">- select -</option>
-                        <?php
-                        include('../includes/config.php');
-                        $query = "SELECT id, username FROM users";
-                        $result = mysqli_query($connection, $query);
-                        if (mysqli_num_rows($result) > 0) {
-                            while ($row = mysqli_fetch_assoc($result)) {
-                                echo '<option value="' . $row['id'] . '">' . $row['username'] . '</option>';
-                            }
-                        }
-                        ?>
-
-
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" name="description" rows="3" cols="40" placeholder="Mention the task"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="start_date">Start Date</label>
-                    <input type="date" id="start_date" name="start_date">
-                </div>
-
-                <div class="form-group">
-                    <label for="end-date">End Date</label>
-                    <input type="date" id="end_date" name="end_date">
-                </div>
-                <input type="submit" class="btn btn-warning" name="create_task" value="create">
-            </form>
+<div class="otms-card">
+    <form method="post" action="admin_dashboard.php">
+        <div class="otms-field">
+            <label for="user_ids">Assign to user(s) *</label>
+            <select name="user_ids[]" id="user_ids" class="form-select" multiple size="6">
+                <?php foreach ($users as $u): ?>
+                    <option value="<?= (int)$u['id'] ?>"><?= htmlspecialchars($u['username']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple users.</small>
         </div>
-    </div>
-
-</body>
-
-</html>
+        <div class="otms-field">
+            <label for="title">Title (optional)</label>
+            <input type="text" name="title" id="title" placeholder="e.g. Complete report">
+        </div>
+        <div class="otms-field">
+            <label for="description">Description *</label>
+            <textarea name="description" id="description" required placeholder="Task description..."></textarea>
+        </div>
+        <div class="row g-2">
+            <div class="col-md-6">
+                <div class="otms-field">
+                    <label for="start_date">Start date</label>
+                    <input type="date" name="start_date" id="start_date">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="otms-field">
+                    <label for="end_date">End date</label>
+                    <input type="date" name="end_date" id="end_date">
+                </div>
+            </div>
+        </div>
+        <div class="otms-field">
+            <label for="priority">Priority</label>
+            <select name="priority" id="priority" class="form-select">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+            </select>
+        </div>
+        <button type="submit" name="create_task" class="otms-btn otms-btn-primary">Create task</button>
+    </form>
+</div>
